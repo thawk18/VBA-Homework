@@ -1,0 +1,299 @@
+----------------------------------------------------------------------------------------------------------
+There are some issues with this code and I unfortunately realised this too late. 
+Anyway I would like to explain why this is happening:
+----------------------------------------------------------------------------------------------------------
+1 - For the year 2016 the ticker AAC came up with its values wrong.
+This is because of my "Workingdays" variable, I wrongly assumed all tickers had
+the same trade days within a year. The ticker AAC just had data from October so my code 
+didn't work there. I would need an indented loop with i and j and with conditional to cover such cases. 
+The number of working days are equal to the first ticker of each year.  
+
+2 - I possibly overcomplicated my code, it runs well in smaller files and test file. It seems to take ages 
+for the master file so I had to reduce considerably this file to ran the macros with a single click. 
+There might be inconsistencies in Max and Min because it's calculating from a reduced sample of tickers
+
+---------------------------------------------------------------------------------------------------------
+The codes are below: 
+---------------------------------------------------------------------------------------------------------
+
+I separated in 3 different macros below:
+- Ticker generator
+- Max Min calculator
+- Formatting
+
+
+Sub ticker():
+
+'variables definition
+Dim lastrow As Long
+Dim i As Long
+Dim j As Long
+Dim ticker As Long
+Dim YearlyChange As Double
+Dim Percentchange As Double
+Dim Workingdays As Integer
+Dim Sheet As Worksheet
+
+         
+For Each Sheet In Worksheets
+
+
+'Writing up titles
+Sheet.Cells(1, 9).Value = "Ticker"
+Sheet.Cells(1, 10).Value = "Yearly Change"
+Sheet.Cells(1, 11).Value = "Percentage Change"
+
+' how many rows the data source has?
+lastrow = Sheet.Cells(Rows.Count, 1).End(xlUp).Row
+
+i = 2
+
+For i = 2 To lastrow
+
+' Compare the current cell with the cell above
+' if current cell is different from the cell above then there is a new ticker
+If Sheet.Cells(i, 1).Value <> Sheet.Cells(i - 1, 1).Value Then
+
+' Get the next line to fill ticker
+tickerrow = Sheet.Cells(Rows.Count, 9).End(xlUp).Row + 1
+
+
+'place new ticker
+Sheet.Cells(tickerrow, 9).Value = Sheet.Cells(i, 1).Value
+
+ElseIf Sheet.Cells(i, 1).Value = Sheet.Cells(2, 9).Value Then
+
+'Get number of extra working days after first day (nr of data source lines per ticker -1)
+'this way macro works for any given year
+Workingdays = Workingdays + 1
+
+End If
+
+
+Next i
+   
+' get the last row of total tickers
+nrtickers = Sheet.Cells(Rows.Count, 9).End(xlUp).Row
+
+j = 2
+' for each ticker
+For j = 2 To nrtickers + 1
+
+i = 2
+
+i = Workingdays + 2
+
+'run again through data source starting on the working days, +2 to adjust to line
+For i = Workingdays + 2 To lastrow + Workingdays
+
+' if Column I as the same ticker of column A...
+If Sheet.Cells(i, 1).Value = Sheet.Cells(j, 9).Value Then
+
+'calculate yearly change, percentage change and total volume
+YearlyChange = Sheet.Cells(i, 6) - Sheet.Cells(i - Workingdays, 3)
+Percentchange = YearlyChange / Sheet.Cells(i - Workingdays, 3)
+TotalVolume = Sheet.Cells(i - Workingdays, 7) + TotalVolume
+
+Else
+End If
+
+Next i
+
+' Place all results in the table
+Sheet.Cells(j, 10).Value = YearlyChange
+Sheet.Cells(j, 11).Value = Percentchange
+Sheet.Cells(j - 1, 12).Value = TotalVolume
+
+' Remove last cells as they don't need a value
+Sheet.Cells(nrtickers + 1, 10).Value = ""
+Sheet.Cells(nrtickers + 1, 11).Value = ""
+
+'Total Volume to reset for next sheet
+TotalVolume = 0
+
+Next j
+
+Sheet.Cells(1, 12).Value = "Total Stock Volume"
+
+'Reset variables for next sheet
+Workingdays = 0
+tickerrow = 0
+lastrow = 0
+nrtickers = 0
+
+Next
+
+End Sub
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Sub MaxMin()
+
+
+
+' Define Variables
+Dim Sheet As Worksheet
+Dim i As Long
+Dim firstRow As Integer
+Dim columnNumber As Integer
+Dim max As Double
+Dim min As Double
+Dim lastticker As Integer
+Dim ticker As String
+
+         
+For Each Sheet In Worksheets
+
+Sheet.Cells(1, 16) = "Ticker"
+Sheet.Cells(1, 17) = "Value"
+Sheet.Cells(2, 15) = "Greateast % Increase"
+Sheet.Cells(3, 15) = "Greateast % Decrease"
+Sheet.Cells(4, 15) = "Greateast Total Volume"
+
+' how many different tickers we have?
+lastticker = Sheet.Cells(Rows.Count, 9).End(xlUp).Row
+
+
+
+
+'GREATEST INCREASE
+'Start in first row
+firstRow = 2
+
+
+For i = firstRow To lastticker
+'finding out maximum value for greatest increase
+    If Sheet.Cells(i, 11) > max Then max = Sheet.Cells(i, 11)
+'finding ticket that correspond to greatest increase
+    If max = Sheet.Cells(i, 11) Then ticker = Sheet.Cells(i, 9)
+    
+Next
+
+'writing down greatest increase
+Sheet.Cells(2, 17) = max
+    
+'writing down ticker with greatest increase
+Sheet.Cells(2, 16) = ticker
+
+
+
+
+
+'GREATEST DECREASE
+'initiate first row
+firstRow = 2
+
+For i = firstRow To lastticker
+'finding out minimum value for greatest decrease
+    If Sheet.Cells(i, 11) < min Then min = Sheet.Cells(i, 11)
+'finding ticket that correspond to greatest decrease
+    If min = Sheet.Cells(i, 11) Then ticker = Sheet.Cells(i, 9)
+   
+Next
+
+'writing down greatest decrease
+Sheet.Cells(3, 17) = min
+
+'writing down ticker with greatest decrease
+Sheet.Cells(3, 16) = ticker
+
+
+
+
+
+'GREATEST TOTAL VOLUME
+'initiate first row
+firstRow = 2
+
+
+For i = firstRow To lastticker
+'finding out maximum Total Volume
+    If Sheet.Cells(i, 12) > max Then max = Sheet.Cells(i, 12)
+'finding ticker with greatest total volume
+    If max = Sheet.Cells(i, 12) Then ticker = Sheet.Cells(i, 9)
+
+Next
+
+
+'writing down ticker with greatest Total Volume
+Sheet.Cells(4, 16) = ticker
+
+'writing down maximum total volume
+Sheet.Cells(4, 17) = max
+
+'reset variables
+lastticker = 0
+max = 0
+min = 0
+
+Next
+
+
+End Sub
+
+
+
+
+
+
+
+
+
+Sub format()
+
+'Define variables
+Dim i As Integer
+Dim ntickers As Integer
+
+For Each Sheet In Worksheets
+
+'Limit number of cells with tickers
+nrtickers = Sheet.Cells(Rows.Count, 9).End(xlUp).Row
+
+For i = 2 To nrtickers
+
+'Conditional formating
+If Sheet.Cells(i, 10).Value >= 0 Then
+
+Sheet.Cells(i, 10).Interior.ColorIndex = 4
+
+Else
+
+Sheet.Cells(i, 10).Interior.ColorIndex = 3
+
+End If
+
+'Format cells to correct units
+Sheet.Cells(i, 10).NumberFormat = "$0.00"
+Sheet.Cells(i, 11).NumberFormat = "0.00%"
+Sheet.Cells(i, 12).NumberFormat = "$0"
+
+Next i
+
+'Format cells to correct units
+Sheet.Cells(2, 17).NumberFormat = "0.00%"
+Sheet.Cells(3, 17).NumberFormat = "0.00%"
+Sheet.Cells(4, 17).NumberFormat = "$0"
+
+'reset variables for next sheet
+ntickers = 0
+i = 2
+
+Next
+
+
+End Sub
